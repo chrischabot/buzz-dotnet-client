@@ -1,0 +1,10 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace Google.Api.Buzz.Examples {
+  public class SampleBase {
+    public abstract void Run(Buzz buzz);
+  }
+}
