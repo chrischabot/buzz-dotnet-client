@@ -1,0 +1,32 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buzz", "Src\Buzz.csproj", "{EEE4F36A-47D7-4411-89D5-3061DE9B7B13}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buzz.Examples", "Examples\Buzz.Examples.csproj", "{F966A061-8F29-4997-B89D-F0D0C13BF046}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buzz.Tests", "Tests\Buzz.Tests.csproj", "{1F958C7A-E8BE-4938-BFB2-D26F68AA63EE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EEE4F36A-47D7-4411-89D5-3061DE9B7B13}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EEE4F36A-47D7-4411-89D5-3061DE9B7B13}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EEE4F36A-47D7-4411-89D5-3061DE9B7B13}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EEE4F36A-47D7-4411-89D5-3061DE9B7B13}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F966A061-8F29-4997-B89D-F0D0C13BF046}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F966A061-8F29-4997-B89D-F0D0C13BF046}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F966A061-8F29-4997-B89D-F0D0C13BF046}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F966A061-8F29-4997-B89D-F0D0C13BF046}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1F958C7A-E8BE-4938-BFB2-D26F68AA63EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1F958C7A-E8BE-4938-BFB2-D26F68AA63EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1F958C7A-E8BE-4938-BFB2-D26F68AA63EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1F958C7A-E8BE-4938-BFB2-D26F68AA63EE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
