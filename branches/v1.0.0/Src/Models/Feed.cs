@@ -32,6 +32,8 @@ namespace Google.Api.Buzz.Models {
     
     public Feed (FEED_TYPE type) {
       this.type = type;
+      this.entries = new List<Entry>();
+      this.links = new List<Link>();
     }
 
     public Feed(FEED_TYPE type, string id, string title, IList<Entry> entries, string generator, 

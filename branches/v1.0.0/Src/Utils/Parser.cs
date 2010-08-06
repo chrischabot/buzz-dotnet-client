@@ -26,6 +26,7 @@ namespace Google.Api.Buzz.Utils {
   public class Parser {
     
     private bool isDebug = false;
+      private Buzz buzz = null;
     
     /// <summary>
     /// The entry point method for the parser with activity feeds
@@ -38,42 +39,98 @@ namespace Google.Api.Buzz.Utils {
     /// </returns>
     public Feed Parse(string url) {
       Console.WriteLine(url);
-      return Parse(url, Feed.FEED_TYPE.ACTIVITY);
-    }
-    
-    private Feed Parse(string url, Feed.FEED_TYPE type) {
-      XmlDocument feedXml = Utils.GetFeedXML(url);
-      XmlNamespaceManager nsMgr = GetNamespaceTable(feedXml);
-      
-      Feed feed = new Feed(type);
-      XmlElement docElement = feedXml.DocumentElement;
-            
-      feed.Title = GetNodeValue(docElement, Constants.ATOM, Constants.TITLE, nsMgr);
-      feed.Id = GetNodeValue(docElement, Constants.ATOM, Constants.ID, nsMgr);
-      feed.Generator = GetNodeValue(docElement, Constants.ATOM, Constants.GENERATOR, nsMgr);
-      
-      XmlNodeList entryNodes = GetNodes(docElement, Constants.ATOM, Constants.ENTRY, nsMgr);
-      
-      if (type == Feed.FEED_TYPE.ACTIVITY) {
-        foreach(XmlElement entryNode in entryNodes) {
-          feed.AddEntry(GetPost(entryNode, nsMgr));
-        }
-        
-        XmlNodeList feedLinks = GetNodes(docElement, Constants.ATOM, Constants.LINK, nsMgr);
-        foreach(XmlElement feedLink in feedLinks) {
-          feed.AddLink(GetLink(feedLink));
-        }
-        
-        feed.Updated = GetNodeValue(docElement, Constants.ATOM, Constants.UPDATED, nsMgr);
-      } else if (type == Feed.FEED_TYPE.COMMENT) {
-          feed.AddLink(GetLink((XmlElement) GetNode(docElement, Constants.ATOM, Constants.LINK, nsMgr)));
-          foreach(XmlElement commentNode in entryNodes) {
-            feed.AddEntry(GetComment(commentNode, nsMgr));
-          }
+      return Parse(url, String.Empty, Feed.FEED_TYPE.ACTIVITY);
+  }
+      public Feed Parse(string url, string postData)
+      {
+          Console.WriteLine(url);
+          return Parse(url, postData, Feed.FEED_TYPE.ACTIVITY);
       }
-      
-      return feed;
-    }
+
+      public void setBuzz(Buzz buzz)
+      {
+          this.buzz = buzz;
+      }
+      private Feed Parse(string url, Feed.FEED_TYPE type)
+      {
+          return Parse(url, String.Empty, type);
+      }
+      public ProfileFeed ParseProfile(string url, string postData)
+      {
+          Console.WriteLine(url);
+          XmlDocument feedXml = Utils.GetFeedXML(url, postData, buzz);
+          return ParseUserProfile(feedXml);
+      }
+
+      public Feed Parse(string url, string postData, Feed.FEED_TYPE type)
+      {
+          XmlDocument feedXml = Utils.GetFeedXML(url, postData, buzz);
+          return Parse(feedXml,type);
+      }
+      public ProfileFeed ParseUserProfile(XmlDocument feedXml)
+      {
+          XmlNamespaceManager nsMgr = GetNamespaceTable(feedXml);
+          ProfileFeed profileFeed = new ProfileFeed();
+          profileFeed.entries = new List<BuzzUserProfile>();
+          XmlElement docElement = feedXml.DocumentElement;
+
+          profileFeed.startIndex = GetNodeValueInt(docElement, Constants.POCO, Constants.STARTINDEX, nsMgr);
+          profileFeed.totalResults = GetNodeValueInt(docElement, Constants.POCO, Constants.TOTALRESULTS, nsMgr);
+          profileFeed.itemsPerPage = GetNodeValueInt(docElement, Constants.POCO, Constants.ITEMSPERPAGE, nsMgr);
+
+          XmlNodeList entryNodes = GetNodes(docElement, Constants.POCO, Constants.ENTRY, nsMgr);
+          foreach (XmlElement entryNode in entryNodes)
+          {
+              profileFeed.entries.Add(GetUserProfile(entryNode, nsMgr));
+          }
+          return profileFeed;
+      }
+
+      public Feed Parse(XmlDocument feedXml, Feed.FEED_TYPE type)
+      {
+          XmlNamespaceManager nsMgr = GetNamespaceTable(feedXml);
+
+          Feed feed = new Feed(type);
+          XmlElement docElement = feedXml.DocumentElement;
+
+          feed.Title = GetNodeValue(docElement, Constants.ATOM, Constants.TITLE, nsMgr);
+          feed.Id = GetNodeValue(docElement, Constants.ATOM, Constants.ID, nsMgr);
+          feed.Generator = GetNodeValue(docElement, Constants.ATOM, Constants.GENERATOR, nsMgr);
+
+          XmlNodeList entryNodes = GetNodes(docElement, Constants.ATOM, Constants.ENTRY, nsMgr);
+
+          if (type == Feed.FEED_TYPE.ACTIVITY)
+          {
+              foreach (XmlElement entryNode in entryNodes)
+              {
+                  feed.AddEntry(GetPost(entryNode, nsMgr));
+              }
+              if (entryNodes.Count == 0)
+              {
+                  Post post = GetPost(docElement, nsMgr);
+                  if ( post.Author != null && !String.IsNullOrEmpty(post.Author.Name))
+                    feed.AddEntry(post);
+              }
+
+              XmlNodeList feedLinks = GetNodes(docElement, Constants.ATOM, Constants.LINK, nsMgr);
+              foreach (XmlElement feedLink in feedLinks)
+              {
+                  feed.AddLink(GetLink(feedLink));
+              }
+
+              feed.Updated = GetNodeValue(docElement, Constants.ATOM, Constants.UPDATED, nsMgr);
+          }
+          else if (type == Feed.FEED_TYPE.COMMENT)
+          {
+              feed.AddLink(GetLink((XmlElement)GetNode(docElement, Constants.ATOM, Constants.LINK, nsMgr)));
+              foreach (XmlElement commentNode in entryNodes)
+              {
+                  feed.AddEntry(GetComment(commentNode, nsMgr));
+              }
+          }
+
+          return feed;
+      }
     
     private Post GetPost(XmlElement entryNode, XmlNamespaceManager nsMgr) {
       Post post = new Post();
@@ -159,10 +216,41 @@ namespace Google.Api.Buzz.Utils {
       link.ThreadUpdated = linkNode.GetAttribute(Constants.THREAD_UPDATED);
       
       return link;
-    }
+  }
+
+      private BuzzUserProfile GetUserProfile(XmlElement authorNode, XmlNamespaceManager nsMgr)
+      {
+          BuzzUserProfile author = new BuzzUserProfile();
+
+          author.Id = GetNodeValue(authorNode, Constants.POCO, Constants.ID, nsMgr);
+          author.Name = GetNodeValue(authorNode, Constants.POCO, Constants.DISPLAYNAME, nsMgr);
+          author.ProfileUrl = GetNodeValue(authorNode, Constants.POCO, Constants.PROFILE_URL, nsMgr);
+          author.PhotoUrl = GetNodeValue(authorNode, Constants.POCO, Constants.THUMBNAIL_URL, nsMgr);
+          XmlNodeList urls = GetNodes(authorNode, Constants.POCO, Constants.URLS, nsMgr);
+          author.urls = new List<Url>();
+          foreach (XmlElement urlNode in urls)
+          {
+              author.urls.Add(GetURL(urlNode, nsMgr));
+          }
+          XmlNodeList photos = GetNodes(authorNode, Constants.POCO, Constants.PHOTOS, nsMgr);
+          author.photos = new List<Photo>();
+          foreach (XmlElement photoNode in photos)
+          {
+              author.photos.Add(GetPhoto(photoNode, nsMgr));
+          }
+          XmlNodeList organizations = GetNodes(authorNode, Constants.POCO, Constants.ORGNIZATIONS, nsMgr);
+          author.organizations = new List<Organization>();
+          foreach (XmlElement org in organizations)
+          {
+              author.organizations.Add(GetOrganization(org, nsMgr));
+          }
+          return author;
+      }
     
     private Person GetAuthor(XmlElement authorNode, XmlNamespaceManager nsMgr) {
       Person author = new Person();
+      if (authorNode == null)
+          return null;
       
       author.Id = GetNodeValue(authorNode, Constants.POCO, Constants.ID, nsMgr);
       author.Name = GetNodeValue(authorNode, Constants.ATOM, Constants.NAME, nsMgr);
@@ -171,10 +259,48 @@ namespace Google.Api.Buzz.Utils {
       author.ActivityObjectType = GetNodeValue(authorNode, Constants.ACTIVITY, Constants.OBJECT_TYPE, nsMgr);
       
       return author;
-    }
+  }
+
+  private Url GetURL(XmlElement urlNode, XmlNamespaceManager nsMgr)
+  {
+      Url url = new Url();
+      if (urlNode == null)
+          return url;
+
+      url.type = GetNodeValue(urlNode, Constants.POCO, Constants.TYPE, nsMgr);
+      url.url = GetNodeValue(urlNode, Constants.POCO, Constants.VALUE, nsMgr);
+
+      return url;
+  }
+      private Organization GetOrganization(XmlElement urlNode, XmlNamespaceManager nsMgr)
+  {
+      Organization org = new Organization();
+      if (urlNode == null)
+          return org;
+
+      org.type = GetNodeValue(urlNode, Constants.POCO, Constants.TYPE, nsMgr);
+      org.name = GetNodeValue(urlNode, Constants.POCO, Constants.NAME, nsMgr);
+
+      return org;
+  }
+  private Photo GetPhoto(XmlElement photoNode, XmlNamespaceManager nsMgr)
+  {
+      Photo photo = new Photo();
+      if (photoNode == null)
+          return photo;
+
+      photo.type = GetNodeValue(photoNode, Constants.POCO, Constants.TYPE, nsMgr);
+      photo.url = GetNodeValue(photoNode, Constants.POCO, Constants.VALUE, nsMgr);
+      photo.width = GetNodeValueInt(photoNode, Constants.POCO, Constants.WIDTH, nsMgr);
+      photo.height = GetNodeValueInt(photoNode, Constants.POCO, Constants.HEIGHT, nsMgr);
+
+      return photo;
+  }
     
     private ActivityObject GetObject(XmlElement objectNode, XmlNamespaceManager nsMgr) {
       ActivityObject activityObject = new ActivityObject();
+      if (objectNode == null)
+          return activityObject;
       
       activityObject.Content = GetNodeValue(objectNode, Constants.ATOM, Constants.CONTENT, nsMgr);
       activityObject.Type = GetNodeValue(objectNode, Constants.ACTIVITY, Constants.OBJECT_TYPE, nsMgr);
@@ -190,6 +316,8 @@ namespace Google.Api.Buzz.Utils {
     
     private CrosspostSource GetCrosspostSource(XmlElement crosspostSrcNode, XmlNamespaceManager nsMgr) {
       CrosspostSource crosspostSource = new CrosspostSource();
+      if (crosspostSrcNode == null)
+          return crosspostSource;
       
       crosspostSource.Id = GetNodeValue(crosspostSrcNode, Constants.ATOM, Constants.ID, nsMgr);
       
@@ -198,6 +326,8 @@ namespace Google.Api.Buzz.Utils {
     
     private Source GetSource(XmlElement srcNode, XmlNamespaceManager nsMgr) {
       Source source = new Source();
+      if (srcNode == null)
+          return source;
       
       source.ActivityService = GetActivityService((XmlElement) 
         GetNodeObject(srcNode, Constants.ACTIVITY, Constants.SERVICE, nsMgr), nsMgr);
@@ -207,6 +337,8 @@ namespace Google.Api.Buzz.Utils {
     
     private BuzzVisibility GetBuzzVisibility(XmlElement buzzVisibilityNode, XmlNamespaceManager nsMgr) {
       BuzzVisibility buzzVisibility = new BuzzVisibility();
+      if (buzzVisibilityNode == null)
+          return buzzVisibility;
       
       buzzVisibility.BuzzAclEntry = GetBuzzAclEntry((XmlElement)
         GetNodeObject(buzzVisibilityNode, Constants.BUZZ, Constants.ACLENTRY, nsMgr), nsMgr);
@@ -216,6 +348,8 @@ namespace Google.Api.Buzz.Utils {
     
     private Attachment GetAttachment(XmlElement attachmentNode, XmlNamespaceManager nsMgr) {
       Attachment attachment = new Attachment();
+      if (attachmentNode == null)
+          return attachment;
       
       attachment.Content = GetNodeValue(attachmentNode, Constants.ATOM, Constants.CONTENT, nsMgr);
       attachment.Title = GetNodeValue(attachmentNode, Constants.ATOM, Constants.TITLE, nsMgr);
@@ -231,6 +365,8 @@ namespace Google.Api.Buzz.Utils {
     
     private ActivityService GetActivityService(XmlElement activitySvcNode, XmlNamespaceManager nsMgr) {
       ActivityService activityService = new ActivityService();
+      if (activitySvcNode == null)
+          return activityService;
       
       activityService.Title = GetNodeValue(activitySvcNode, Constants.ATOM, Constants.TITLE, nsMgr);
       
@@ -239,6 +375,8 @@ namespace Google.Api.Buzz.Utils {
     
     private BuzzAclEntry GetBuzzAclEntry(XmlElement aclEntryNode, XmlNamespaceManager nsMgr) {
       BuzzAclEntry buzzAclEntry = new BuzzAclEntry();
+      if (aclEntryNode == null)
+          return buzzAclEntry;
       
       buzzAclEntry.Id = GetNodeValue(aclEntryNode, Constants.POCO, Constants.ID, nsMgr);
       buzzAclEntry.Uri = GetNodeValue(aclEntryNode, Constants.ATOM, Constants.URI, nsMgr);
@@ -303,7 +441,25 @@ namespace Google.Api.Buzz.Utils {
       	  }
       	return null;
       }
-    }
+  }
+  private Int32 GetNodeValueInt(XmlElement element, string xmlns, string nodeName, XmlNamespaceManager nsMgr)
+  {
+      string path = new StringBuilder().Append(xmlns).Append(":").
+          Append(nodeName).Append("/text()").ToString();
+      try
+      {
+           return Int32.Parse( element.SelectSingleNode(path, nsMgr).Value);
+      }
+      catch (Exception ex)
+      {
+          if (isDebug)
+          {
+              Console.WriteLine("an error occurred while getting the node value at " +
+                path + " for " + element.Name + ".");
+          }
+          return 0;
+      }
+  }
     
     private XmlNode GetNodeObject(XmlElement element, string xmlns, string nodeName, XmlNamespaceManager nsMgr) {
       string path = new StringBuilder().Append(xmlns).Append(":").
@@ -318,5 +474,6 @@ namespace Google.Api.Buzz.Utils {
       	return null;
       }
     }
+
   }
 }
